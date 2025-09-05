@@ -7,7 +7,9 @@ import Appv2 from './components/appv2/appv2'
 function App() {
   const [version, setVersion]= useState("v1.3.9")
   
-
+  useEffect(() => {
+    setVersion(window._env_?.VERSION || "v0.0.0")
+  }, [])
   
   return (
   <div className='appN'>

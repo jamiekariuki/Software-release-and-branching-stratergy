@@ -11,9 +11,14 @@ RUN npm run build
 # -------- STAGE 2: Serve --------
 FROM nginx:alpine AS production
 
-RUN rm -rf /usr/share/nginx/html/*
-COPY --from=builder /app/dist /usr/share/nginx/html
+WORKDIR /usr/share/nginx/html
+
+RUN rm -rf ./*
+COPY --from=builder /app/dist ./
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY env.sh /docker-entrypoint.d/env.sh
+
+RUN chmod +x /docker-entrypoint.d/env.sh
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
