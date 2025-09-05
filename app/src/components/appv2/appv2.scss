@@ -1,0 +1,37 @@
+.app2{
+    background-color: rgb(74, 243, 40);
+    padding: 30px;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 30px;
+
+    .container2{
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+
+        .circles{
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: rgb(29, 26, 182);
+
+            &.c1{
+            //    background-color: aqua;
+             //   border-radius: 10%;
+            }
+
+            &.c2{
+              //  background-color: aqua;
+            //  border-radius: 100%;
+            }
+            &.c3{
+              //  background-color: aqua;
+             // border-radius: 100%;
+            }
+        }
+    }
+
+}
