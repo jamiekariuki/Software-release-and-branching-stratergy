@@ -4,11 +4,13 @@ module "vpc" {
   name = "app-vpc-${var.ENV_PREFIX}"
   cidr = "10.0.0.0/16"
 
-  azs             = ["${var.region}-1a"]
+  azs             = ["${var.region}a"]
   public_subnets  = ["10.0.101.0/24"]
 
   enable_nat_gateway = false
   enable_vpn_gateway = false
+  manage_default_security_group = false
+  manage_default_network_acl = false
 
   tags = {
     Terraform = "true"
@@ -20,7 +22,8 @@ module "vpc" {
 resource "aws_security_group" "web_sg" {
   name        = "web-${var.ENV_PREFIX}-sg"
   description = "allows all traffic to our web app"
-  vpc_id      = module.vpc.default_vpc_id
+  vpc_id      = module.vpc.vpc_id
+
 
   # Inbound rules → ingress
   ingress {
@@ -54,14 +57,11 @@ module "ec2_instance" {
   key_name      = "N.VIRGINIA-KEY"
   monitoring    = true
   subnet_id     = module.vpc.public_subnets[0]
-
   vpc_security_group_ids    = [aws_security_group.web_sg.id]
-
-  
   associate_public_ip_address = true
-
   iam_instance_profile = module.ec2_ecr_role.instance_profile_name
   
+  create_security_group = false
 
   tags = {
     Terraform   = "true"
@@ -76,7 +76,7 @@ module "iam_role_github_oidc" {
 
   enable_github_oidc      = true
  
-  oidc_wildcard_subjects = [
+  oidc_subjects = [
   "jamiekariuki/Software-release-and-branching-stratergy:ref:refs/heads/release/dev",
   "jamiekariuki/Software-release-and-branching-stratergy:ref:refs/heads/release/stage",
   "jamiekariuki/Software-release-and-branching-stratergy:ref:refs/heads/release/prod",
@@ -92,15 +92,17 @@ module "iam_role_github_oidc" {
     Environment = var.ENV_PREFIX
   }
 }
+
 //iam for ec2
 module "ec2_ecr_role" {
   source = "terraform-aws-modules/iam/aws//modules/iam-role"
 
   name = "${var.ENV_PREFIX}-ec2-ecr-role"
 
-  # Trust policy: EC2 instances can assume this role
   trust_policy_permissions = {
-    TrustRoleAndServiceToAssume = {
+    ec2 = {
+      effect = "Allow"
+      actions = ["sts:AssumeRole"]
       principals = [{
         type        = "Service"
         identifiers = ["ec2.amazonaws.com"]
@@ -108,16 +110,18 @@ module "ec2_ecr_role" {
     }
   }
 
-  # Attach Amazon managed policy for ECR read-only
   policies = {
     ECRReadOnly = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
   }
+
+  create_instance_profile = true
 
   tags = {
     Terraform   = "true"
     Environment = var.ENV_PREFIX
   }
 }
+
 
 //ecr
 module "ecr" {
