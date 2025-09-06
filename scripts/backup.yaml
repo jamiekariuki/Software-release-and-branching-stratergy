@@ -8,7 +8,7 @@ on:
 env:
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }} # AWS account id
   ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }} # full ECR URI from Terraform
-  EC2_USER: ubuntu # default user for EC2
+  EC2_USER: ec2-user # default user for EC2
   SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }} # private key for SSH to EC2
   EC2_HOST: ${{ secrets.EC2_PUBLIC_IP }} # public IP or DNS of your EC2
 
@@ -90,3 +90,53 @@ jobs:
           docker build -t $ECR_REGISTRY:$VERSION -t $ECR_REGISTRY:latest .
           docker push $ECR_REGISTRY:$VERSION
           docker push $ECR_REGISTRY:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: push
+    env:
+      VERSION: ${{ needs.versioning.outputs.new_version }}
+      ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+
+    steps:
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
+
+      - name: Copy repo to EC2
+        run: |
+          scp -i ~/.ssh/id_rsa -r . ${EC2_USER}@${EC2_HOST}:/home/ec2-user/app
+
+      - name: Deploy via SSH
+        run: |
+          ssh -i ~/.ssh/id_rsa ${EC2_USER}@${EC2_HOST} "
+            cd /home/ec2-user/app
+            export ECR_REGISTRY=$ECR_REGISTRY
+            export VERSION=$VERSION
+            docker-compose pull
+            docker-compose up -d --build
+          "
+
+  tag_release:
+    runs-on: ubuntu-latest
+    needs: deploy
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create and push Git tag
+        run: |
+          VERSION=${{ needs.versioning.outputs.new_version }}
+          git tag $VERSION
+          git push origin $VERSION
