@@ -9,7 +9,7 @@ variable "region" {
 
 variable "ENV_PREFIX" {
   type        = string
-  description = "Environment prefix (dev, staging, prod)"
+  description = "Environment prefix (dev, stage, prod)"
 
   validation {
     condition     = contains(["dev", "stage", "prod"], var.ENV_PREFIX)
