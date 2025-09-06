@@ -55,6 +55,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Make script executable
+        run: chmod +x ./scripts/bump-version.sh
+
       - name: Bump semantic version
         id: bump
         run: ./scripts/bump-version.sh
