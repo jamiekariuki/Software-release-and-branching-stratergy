@@ -3,9 +3,7 @@ name: Dev CI
 on:
   push:
     branches:
-      - release/dev
-    paths:
-      - "app/**"
+      - main
 
 jobs:
   build:
