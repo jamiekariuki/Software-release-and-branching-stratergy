@@ -1,4 +1,4 @@
-name: Dev CI/CD (SSH Deployment)
+name: Dev CI/CD
 
 on:
   push:
@@ -13,7 +13,6 @@ env:
   EC2_HOST: ${{ secrets.EC2_PUBLIC_IP }} # public IP or DNS of your EC2
 
 permissions:
-  id-token: write
   contents: read
 
 jobs:
@@ -59,7 +58,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Make script executable
+      - name: Make bump script executable
         run: chmod +x ./scripts/bump-version.sh
 
       - name: Bump semantic version
@@ -79,10 +78,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Configure AWS credentials (OIDC)
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/dev-github-oidc-role
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
       - name: Login to Amazon ECR
