@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-# 1. Get last tag
-LAST_TAG=$(git describe --tags --abbrev=0)
+# 1. Get last tag, default to v0.0.0 if none exist
+LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
 echo "Last tag: $LAST_TAG"
 
 # 2. Get commits since last tag
@@ -32,5 +32,5 @@ esac
 NEW_TAG="v$MAJOR.$MINOR.$PATCH"
 echo "New version: $NEW_TAG"
 
-# 5. expose the version outside the script
+# 5. Expose the version to GitHub Actions
 echo "version=$NEW_TAG" >> $GITHUB_OUTPUT
