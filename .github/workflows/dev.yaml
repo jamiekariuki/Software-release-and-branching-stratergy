@@ -13,7 +13,7 @@ env:
   EC2_HOST: ${{ secrets.EC2_PUBLIC_IP }} # public IP from terraform
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
