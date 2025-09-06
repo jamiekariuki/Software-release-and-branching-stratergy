@@ -6,11 +6,13 @@ variable "region" {
   type = string
 }
 
-//remote backend url
-/* variable "bucket" {
-  type = string
-} */
-//dev,stage,prod
+
 variable "ENV_PREFIX" {
-  type = string
+  type        = string
+  description = "Environment prefix (dev, staging, prod)"
+
+  validation {
+    condition     = contains(["dev", "stage", "prod"], var.ENV_PREFIX)
+    error_message = "ENV_PREFIX must be one of: dev, staging, prod."
+  }
 }
