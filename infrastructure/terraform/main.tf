@@ -77,6 +77,7 @@ module "iam_role_github_oidc" {
   enable_github_oidc      = true
  
   oidc_subjects = [
+  "jamiekariuki/Software-release-and-branching-stratergy:ref:refs/heads/main",
   "jamiekariuki/Software-release-and-branching-stratergy:ref:refs/heads/release/dev",
   "jamiekariuki/Software-release-and-branching-stratergy:ref:refs/heads/release/stage",
   "jamiekariuki/Software-release-and-branching-stratergy:ref:refs/heads/release/prod",

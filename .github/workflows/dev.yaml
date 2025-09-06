@@ -12,6 +12,10 @@ env:
   SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }} # private key for SSH to EC2
   EC2_HOST: ${{ secrets.EC2_PUBLIC_IP }} # public IP or DNS of your EC2
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
