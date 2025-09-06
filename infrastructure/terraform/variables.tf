@@ -13,6 +13,6 @@ variable "ENV_PREFIX" {
 
   validation {
     condition     = contains(["dev", "stage", "prod"], var.ENV_PREFIX)
-    error_message = "ENV_PREFIX must be one of: dev, staging, prod."
+    error_message = "ENV_PREFIX must be one of: dev, stage, prod."
   }
 }
