@@ -100,7 +100,7 @@ jobs:
 
   tag_release:
     runs-on: ubuntu-latest
-    needs: push
+    needs: [push, versioning]
 
     steps:
       - name: Checkout repo
