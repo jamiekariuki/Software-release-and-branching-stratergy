@@ -94,9 +94,8 @@ jobs:
           VERSION=${{ needs.versioning.outputs.new_version }}
           echo "Using ECR registry: $ECR_REGISTRY"
 
-          docker build -t $ECR_REGISTRY:$VERSION -t $ECR_REGISTRY:latest ./app
+          docker build -t $ECR_REGISTRY:$VERSION ./app
           docker push $ECR_REGISTRY:$VERSION
-          docker push $ECR_REGISTRY:latest
 
   tag_release:
     runs-on: ubuntu-latest
