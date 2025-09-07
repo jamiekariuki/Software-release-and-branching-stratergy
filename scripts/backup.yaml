@@ -140,3 +140,117 @@ jobs:
           VERSION=${{ needs.versioning.outputs.new_version }}
           git tag $VERSION
           git push origin $VERSION
+---
+##########################################
+name: CI + Terraform Workflow
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  # Step 1: Detect folder changes
+  filter-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      infra_changed: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for folder changes
+        id: filter
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            infra:
+              - 'infrastructure/**'
+
+  # Step 2: Run Terraform only if infra changed
+name: CI + Terraform Workflow
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  filter-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      infra_changed: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for folder changes
+        id: filter
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            infra:
+              - 'infrastructure/**'
+
+  terraform:
+    needs: filter-changes
+    runs-on: ubuntu-latest
+    if: needs.filter-changes.outputs.infra_changed == 'true'
+    outputs:
+      ecr_url: ${{ steps.collect.outputs.ecr_url }}
+      ec2_ip:  ${{ steps.collect.outputs.ec2_ip }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # ✅ Install Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          # terraform_version: 1.9.x   # (optional) pin a version if you want
+
+      # ✅ Tell AWS which account/region
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ secrets.AWS_REGION }}
+
+      - name: Terraform Init
+        working-directory: infrastructure/terraform
+        run: terraform init -upgrade
+
+      - name: Terraform Apply
+        working-directory: infrastructure/terraform
+        env:
+          TF_IN_AUTOMATION: true
+        run: terraform apply -auto-approve -input=false
+
+      # ✅ Expose TF outputs to the next job (no files/artifacts needed)
+      - name: Collect outputs
+        id: collect
+        working-directory: infrastructure/terraform
+        run: |
+          echo "ecr_url=$(terraform output -raw ecr_url)" >> "$GITHUB_OUTPUT"
+          echo "ec2_ip=$(terraform output -raw ec2_ip)"   >> "$GITHUB_OUTPUT"
+
+  ci:
+    needs: [filter-changes, terraform]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Resolve values: use TF outputs if infra changed, otherwise fall back
+      - name: Resolve infra values
+        run: |
+          if [ "${{ needs.filter-changes.outputs.infra_changed }}" = "true" ]; then
+            echo "ECR_URL=${{ needs.terraform.outputs.ecr_url }}" >> "$GITHUB_ENV"
+            echo "EC2_IP=${{ needs.terraform.outputs.ec2_ip }}"   >> "$GITHUB_ENV"
+          else
+            echo "ECR_URL=${{ secrets.ECR_REGISTRY }}" >> "$GITHUB_ENV"
+            echo "EC2_IP=${{ secrets.DEFAULT_EC2_IP }}" >> "$GITHUB_ENV"
+          fi
+
+      # Example usage in CI
+      - name: Build & push image
+        run: |
+          echo "Using ECR: $ECR_URL, EC2: $EC2_IP"
+          # docker build -t "$ECR_URL/my-app:latest" .
+          # aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
+          #   | docker login --username AWS --password-stdin "$ECR_URL"
+          # docker push "$ECR_URL/my-app:latest"
+
