@@ -32,39 +32,32 @@ jobs:
   terraform:
     needs: filter-changes
     runs-on: ubuntu-latest
-    #    if: needs.filter-changes.outputs.infra_changed == 'true'
     environment: stage
     outputs:
       ecr_url: ${{ steps.collect.outputs.ecr_url }}
       ec2_ip: ${{ steps.collect.outputs.ec2_ip }}
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-
       - name: Terraform Init
         working-directory: infrastructure/terraform
         run: terraform init -upgrade
-
       - name: Select Terraform Workspace
         working-directory: infrastructure/terraform
         run: |
           terraform workspace select stage || terraform workspace new stage
-
       - name: Terraform Apply
         working-directory: infrastructure/terraform
         env:
           TF_IN_AUTOMATION: true
         run: terraform apply -auto-approve -input=false -var="ENV_PREFIX=stage"
-
       - name: Collect outputs
         id: collect
         working-directory: infrastructure/terraform
@@ -112,6 +105,9 @@ jobs:
   push:
     runs-on: ubuntu-latest
     needs: [versioning, terraform]
+    env:
+      VERSION: ${{ needs.versioning.outputs.new_version }}
+      ECR_REGISTRY: ${{ needs.terraform.outputs.ecr_url }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -125,8 +121,6 @@ jobs:
       - id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
       - run: |
-          VERSION=${{ needs.versioning.outputs.new_version }}
-          ECR_REGISTRY=${{ needs.terraform.outputs.ecr_url }}
           echo "Using ECR registry: $ECR_REGISTRY"
           docker build -t $ECR_REGISTRY:$VERSION ./app
           docker push $ECR_REGISTRY:$VERSION
@@ -159,7 +153,6 @@ jobs:
       HOSTNAME: ${{ needs.terraform.outputs.ec2_ip }}
       USER_NAME: ubuntu
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-
     steps:
       - uses: actions/checkout@v4
         with:
