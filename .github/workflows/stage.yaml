@@ -63,7 +63,7 @@ jobs:
         working-directory: infrastructure/terraform
         env:
           TF_IN_AUTOMATION: true
-        run: terraform apply -auto-approve -input=false -var="ENV_PREFIX=stage
+        run: terraform apply -auto-approve -input=false -var="ENV_PREFIX=stage"
 
       # Collect outputs
       - name: Collect outputs
