@@ -143,8 +143,8 @@ jobs:
 
       - name: Deploy via SSH
         run: |
-          ssh -i ~/.ssh/id_rsa ${EC2_USER}@${EC2_HOST} "
-            cd /home/ec2-user/app
+          ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${HOSTNAME} "
+            cd /home/ubuntu/app
             export ECR_REGISTRY=$ECR_REGISTRY
             export VERSION=$VERSION
             docker-compose pull
