@@ -62,8 +62,8 @@ jobs:
   tf-outputs:
     runs-on: ubuntu-latest
     outputs:
-      ecr_url: ${{ steps.extract.outputs.ECR_URL }}
-      ec2_ip: ${{ steps.extract.outputs.EC2_IP }}
+      ECR_URL: ${{ steps.extract.outputs.ECR_URL }}
+      EC2_IP: ${{ steps.extract.outputs.EC2_IP }}
 
     steps:
       - name: Install jq
@@ -133,8 +133,8 @@ jobs:
 
       - name: Debug extracted outputs
         run: |
-          echo "ECR_URL=${{ steps.extract.outputs.ECR_URL }}"
-          echo "EC2_IP=${{ steps.extract.outputs.EC2_IP }}"
+          echo "ECR_URL=${{ needs.tf-outputs.outputs.ECR_URL }}"
+          echo "EC2_IP=${{ needs.tf-outputs.outputs.EC2_IP }}"
 
   # Build and push Docker image to ECR
   push:
