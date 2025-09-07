@@ -21,7 +21,7 @@ module "vpc" {
 //security groups
 resource "aws_security_group" "web_sg" {
   name        = "web-${var.ENV_PREFIX}-sg"
-  description = "allows all traffic to our web app"
+  description = "allows all traffic to our web app and ssh"
   vpc_id      = module.vpc.vpc_id
 
 
@@ -29,6 +29,14 @@ resource "aws_security_group" "web_sg" {
   ingress {
     from_port   = 8080
     to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Allow SSH access
+  ingress {
+    from_port   = 22
+    to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
