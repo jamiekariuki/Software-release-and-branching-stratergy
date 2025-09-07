@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.scss";
 import Appv1 from "./components/appv1/appv1";
 import Appv2 from "./components/appv2/appv2";
