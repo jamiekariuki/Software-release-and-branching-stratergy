@@ -65,6 +65,12 @@ jobs:
           echo "ecr_url=$(terraform output -raw ecr_repo_uri)" >> "$GITHUB_OUTPUT"
           echo "ec2_ip=$(terraform output -raw web_instance_public_ip)" >> "$GITHUB_OUTPUT"
 
+      - name: Debug Terraform outputs
+        working-directory: infrastructure/terraform
+        run: |
+          echo "ECR URL: $(terraform output -raw ecr_repo_uri)"
+          echo "EC2 IP: $(terraform output -raw web_instance_public_ip)"
+
   # CI Build
   build:
     runs-on: ubuntu-latest
@@ -118,12 +124,6 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-
-      - name: Debug Terraform outputs
-        run: |
-          echo "ECR URL: $(terraform output -raw ecr_repo_uri)"
-          echo "EC2 IP: $(terraform output -raw web_instance_public_ip)"
-        working-directory: infrastructure/terraform
 
       - id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
