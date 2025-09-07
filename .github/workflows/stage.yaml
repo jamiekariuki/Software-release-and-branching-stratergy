@@ -1,0 +1,74 @@
+name: CI + Terraform
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  # Step 1: Detect infra changes
+  filter-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      infra_changed: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for folder changes
+        id: filter
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            infra:
+              - 'infrastructure/terraform/**'
+
+  # Step 2: Terraform Apply
+  terraform:
+    needs: filter-changes
+    runs-on: ubuntu-latest
+    if: needs.filter-changes.outputs.infra_changed == 'true'
+    environment: stage
+    outputs:
+      ecr_url: ${{ steps.collect.outputs.ecr_url }}
+      ec2_ip: ${{ steps.collect.outputs.ec2_ip }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # Configure AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      # Init Terraform
+      - name: Terraform Init
+        working-directory: infrastructure/terraform
+        run: terraform init -upgrade
+
+      # Select/Create stage workspace
+      - name: Select Terraform Workspace
+        working-directory: infrastructure/terraform
+        run: |
+          terraform workspace select stage || terraform workspace new stage
+
+      # Terraform Apply
+      - name: Terraform Apply
+        working-directory: infrastructure/terraform
+        env:
+          TF_IN_AUTOMATION: true
+        run: terraform apply -auto-approve -input=false -var="ENV_PREFIX=stage
+
+      # Collect outputs
+      - name: Collect outputs
+        id: collect
+        working-directory: infrastructure/terraform
+        run: |
+          echo "ecr_url=$(terraform output -raw ecr_repo_uri)" >> "$GITHUB_OUTPUT"
+          echo "ec2_ip=$(terraform output -raw web_instance_public_ip)" >> "$GITHUB_OUTPUT"
