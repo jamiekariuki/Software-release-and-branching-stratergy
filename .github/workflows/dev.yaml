@@ -125,7 +125,7 @@ jobs:
   #deploy to ec2
   deploy:
     runs-on: ubuntu-latest
-    needs: push
+    needs: [push, versioning]
     env:
       VERSION: ${{ needs.versioning.outputs.new_version }}
       ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
