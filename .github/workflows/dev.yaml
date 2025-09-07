@@ -133,9 +133,15 @@ jobs:
       USER_NAME: ubuntu
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Setup SSH key
         run: |
-          echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
+          echo "$PRIVATE_KEY" > private_key
+          chmod 600 private_key
 
       - name: Copy repo to EC2
         run: |
