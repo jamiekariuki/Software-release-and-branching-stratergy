@@ -79,11 +79,6 @@ jobs:
           echo "ECR URL: $(terraform output -raw ecr_repo_uri)"
           echo "EC2 IP: $(terraform output -raw web_instance_public_ip)"
 
-      - name: Debug Job Outputs
-        run: |
-          echo "Job outputs ecr_url: ${{ steps.collect.outputs.ecr_url }}"
-          echo "Job outputs ec2_ip: ${{ steps.collect.outputs.ec2_ip }}"
-
   # CI Build
   build:
     runs-on: ubuntu-latest
@@ -105,6 +100,11 @@ jobs:
           cache-dependency-path: app/package-lock.json
       - run: npm ci
       - run: npm run build
+
+      - name: Debug Job Outputs
+        run: |
+          echo "Job outputs ecr_url: ${{ steps.collect.outputs.ecr_url }}"
+          echo "Job outputs ec2_ip: ${{ steps.collect.outputs.ec2_ip }}"
 
   # Semantic versioning
   versioning:
