@@ -82,6 +82,7 @@ jobs:
   # CI Build
   build:
     runs-on: ubuntu-latest
+    needs: terraform
     defaults:
       run:
         working-directory: app
