@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: stage
     outputs:
-      ecr_url: ${{ steps.collect.outputs.ecr_url }}
+      ecr_url: ${{ steps.collect.outputs.ecr_uri }}
       ec2_ip: ${{ steps.collect.outputs.ec2_ip }}
     steps:
       - uses: actions/checkout@v4
