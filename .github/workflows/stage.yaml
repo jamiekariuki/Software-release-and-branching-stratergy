@@ -79,6 +79,15 @@ jobs:
           echo "ECR URL: $(terraform output -raw ecr_repo_uri)"
           echo "EC2 IP: $(terraform output -raw web_instance_public_ip)"
 
+  downstream:
+    runs-on: ubuntu-latest
+    needs: terraform
+    steps:
+      - name: Print outputs
+        run: |
+          echo "ECR: ${{ needs.terraform.outputs.ecr_url }}"
+          echo "EC2 IP: ${{ needs.terraform.outputs.ec2_ip }}"
+
   # CI Build
   build:
     runs-on: ubuntu-latest
