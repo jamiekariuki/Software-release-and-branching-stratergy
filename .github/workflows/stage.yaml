@@ -86,8 +86,8 @@ jobs:
 
       - name: Debug extracted outputs
         run: |
-          echo "ECR_URL=${{ steps.extract.outputs.ECR_URL }}"
-          echo "EC2_IP=${{ steps.extract.outputs.EC2_IP }}"
+          echo "ECR_URL=${{ steps.extract.outputs.ecr_url }}"
+          echo "EC2_IP=${{ steps.extract.outputs.ec2_ip }}"
 
   # CI Build
   build:
@@ -111,8 +111,8 @@ jobs:
 
       - name: Debug extracted outputs
         run: |
-          echo "ECR_URL=${{ steps.extract.outputs.ECR_URL }}"
-          echo "EC2_IP=${{ steps.extract.outputs.EC2_IP }}"
+          echo "ECR_URL=${{ steps.extract.outputs.ecr_url }}"
+          echo "EC2_IP=${{ steps.extract.outputs.ec2_ip }}"
 
   # Semantic versioning
   versioning:
