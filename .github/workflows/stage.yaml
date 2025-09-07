@@ -58,13 +58,13 @@ jobs:
       - name: Select Terraform Workspace
         working-directory: infrastructure/terraform
         run: |
-          terraform workspace select ${{environment}} || terraform workspace new ${{environment}}
+          terraform workspace select $environment || terraform workspace new $environment
 
       - name: Terraform Apply
         working-directory: infrastructure/terraform
         env:
           TF_IN_AUTOMATION: true
-        run: terraform apply -auto-approve -input=false -var="ENV_PREFIX=${{environment}}"
+        run: terraform apply -auto-approve -input=false -var="ENV_PREFIX=$environment"
 
       - name: Collect outputs
         id: collect
