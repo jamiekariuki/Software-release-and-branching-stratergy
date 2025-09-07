@@ -111,8 +111,8 @@ jobs:
 
       - name: Debug extracted outputs
         run: |
-          echo "ECR_URL=${{ steps.tf-outputs.outputs.ecr_url }}"
-          echo "EC2_IP=${{ steps.tf-outputs.outputs.ec2_ip }}"
+          echo "ECR_URL=${{ needs.tf-outputs.outputs.ECR_URL  }}"
+          echo "EC2_IP=${{ needs.tf-outputs.outputs.EC2_IP }}"
 
   # Semantic versioning
   versioning:
