@@ -150,7 +150,7 @@ jobs:
       - name: Deploy via SSH
         run: |
           ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${HOSTNAME} "
-            cd /home/ubuntu/app
+            cd /home/ubuntu/app/app
             export ECR_REGISTRY=$ECR_REGISTRY
             export VERSION=$VERSION
             docker-compose pull
