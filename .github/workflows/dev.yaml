@@ -154,10 +154,11 @@ jobs:
             aws ecr get-login-password --region us-east-1 \
               | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com
 
-            cd /home/ubuntu/app/app
+            cd /home/ubuntu/app/app 
             export ECR_REGISTRY=$ECR_REGISTRY
             export VERSION=$VERSION
 
-            docker-compose pull
-            docker-compose up -d --build
+            docker pull \$ECR_REGISTRY:\$VERSION
+            docker ps -q --filter 'name=app' | grep -q . && docker stop app && docker rm app
+            docker run -d --name app -p 8080:80 \$ECR_REGISTRY:\$VERSION
           "
