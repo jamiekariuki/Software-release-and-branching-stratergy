@@ -65,7 +65,7 @@ jobs:
         id: bump
         run: ./scripts/bump-version.sh
 
-  #build and push docker image to ecr test
+  #build and push docker image to ecr test2
   push:
     runs-on: ubuntu-latest
     needs: versioning
