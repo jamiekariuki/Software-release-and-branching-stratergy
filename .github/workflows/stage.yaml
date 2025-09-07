@@ -33,6 +33,8 @@ jobs:
   terraform:
     needs: filter-changes
     runs-on: ubuntu-latest
+    if: needs.filter-changes.outputs.infra_changed == 'true'
+
     steps:
       - uses: actions/checkout@v4
       - name: Setup Terraform
@@ -59,7 +61,6 @@ jobs:
   # Step 3: Download TF state from S3 and extract outputs
   tf-outputs:
     runs-on: ubuntu-latest
-    needs: terraform
     outputs:
       ecr_url: ${{ steps.extract.outputs.ECR_URL }}
       ec2_ip: ${{ steps.extract.outputs.EC2_IP }}
@@ -108,6 +109,11 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+      - name: Debug extracted outputs
+        run: |
+          echo "ECR_URL=${{ steps.extract.outputs.ECR_URL }}"
+          echo "EC2_IP=${{ steps.extract.outputs.EC2_IP }}"
+
   # Semantic versioning
   versioning:
     runs-on: ubuntu-latest
@@ -124,6 +130,11 @@ jobs:
       - run: chmod +x ./scripts/bump-version.sh
       - id: bump
         run: ./scripts/bump-version.sh
+
+      - name: Debug extracted outputs
+        run: |
+          echo "ECR_URL=${{ steps.extract.outputs.ECR_URL }}"
+          echo "EC2_IP=${{ steps.extract.outputs.EC2_IP }}"
 
   # Build and push Docker image to ECR
   push:
