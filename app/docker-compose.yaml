@@ -1,8 +1,7 @@
 version: "3.9"
 services:
   app:
-    image: ${ECR_REGISTRY}:${VERSION} # <-- registry from Terraform
-    build: .
+    image: ${ECR_REGISTRY}:${VERSION}
     ports:
       - "8080:80"
     environment:
