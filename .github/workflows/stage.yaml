@@ -5,6 +5,13 @@ on:
     branches:
       - main
 
+env:
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+
+permissions:
+  contents: write
+
 jobs:
   # Step 1: Detect infra changes
   filter-changes:
@@ -13,7 +20,6 @@ jobs:
       infra_changed: ${{ steps.filter.outputs.infra }}
     steps:
       - uses: actions/checkout@v4
-
       - name: Check for folder changes
         id: filter
         uses: dorny/paths-filter@v2
@@ -26,20 +32,17 @@ jobs:
   terraform:
     needs: filter-changes
     runs-on: ubuntu-latest
-    if: needs.filter-changes.outputs.infra_changed == 'true'
+    #    if: needs.filter-changes.outputs.infra_changed == 'true'
     environment: stage
     outputs:
       ecr_url: ${{ steps.collect.outputs.ecr_url }}
       ec2_ip: ${{ steps.collect.outputs.ec2_ip }}
-
     steps:
       - uses: actions/checkout@v4
 
-      # Install Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -47,28 +50,129 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      # Init Terraform
       - name: Terraform Init
         working-directory: infrastructure/terraform
         run: terraform init -upgrade
 
-      # Select/Create stage workspace
       - name: Select Terraform Workspace
         working-directory: infrastructure/terraform
         run: |
           terraform workspace select stage || terraform workspace new stage
 
-      # Terraform Apply
       - name: Terraform Apply
         working-directory: infrastructure/terraform
         env:
           TF_IN_AUTOMATION: true
         run: terraform apply -auto-approve -input=false -var="ENV_PREFIX=stage"
 
-      # Collect outputs
       - name: Collect outputs
         id: collect
         working-directory: infrastructure/terraform
         run: |
           echo "ecr_url=$(terraform output -raw ecr_repo_uri)" >> "$GITHUB_OUTPUT"
           echo "ec2_ip=$(terraform output -raw web_instance_public_ip)" >> "$GITHUB_OUTPUT"
+
+  # CI Build
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  # Semantic versioning
+  versioning:
+    runs-on: ubuntu-latest
+    needs: [build, terraform]
+    outputs:
+      new_version: ${{ steps.bump.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - run: chmod +x ./scripts/bump-version.sh
+      - id: bump
+        run: ./scripts/bump-version.sh
+
+  # Build and push Docker image to ECR
+  push:
+    runs-on: ubuntu-latest
+    needs: [versioning, terraform]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: docker/setup-buildx-action@v3
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - run: |
+          VERSION=${{ needs.versioning.outputs.new_version }}
+          ECR_REGISTRY=${{ needs.terraform.outputs.ecr_url }}
+          echo "Using ECR registry: $ECR_REGISTRY"
+          docker build -t $ECR_REGISTRY:$VERSION ./app
+          docker push $ECR_REGISTRY:$VERSION
+
+  # Create Git tag
+  tag_release:
+    runs-on: ubuntu-latest
+    needs: [push, versioning]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - run: |
+          VERSION=${{ needs.versioning.outputs.new_version }}
+          git tag $VERSION
+          git push origin $VERSION
+
+  # Deploy to EC2
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [push, versioning, terraform]
+    env:
+      VERSION: ${{ needs.versioning.outputs.new_version }}
+      ECR_REGISTRY: ${{ needs.terraform.outputs.ecr_url }}
+      PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+      HOSTNAME: ${{ needs.terraform.outputs.ec2_ip }}
+      USER_NAME: ubuntu
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: |
+          echo "$PRIVATE_KEY" > private_key
+          chmod 600 private_key
+      - run: |
+          ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${HOSTNAME} "
+            aws ecr get-login-password --region us-east-1 \
+              | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com
+
+            docker pull \$ECR_REGISTRY:\$VERSION
+            docker ps -q --filter 'name=app' | grep -q . && docker stop app && docker rm app
+            docker run -d --name app -p 8080:80 \$ECR_REGISTRY:\$VERSION
+          "
