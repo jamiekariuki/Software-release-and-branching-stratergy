@@ -118,6 +118,13 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+
+      - name: Debug Terraform outputs
+        run: |
+          echo "ECR URL: $(terraform output -raw ecr_repo_uri)"
+          echo "EC2 IP: $(terraform output -raw web_instance_public_ip)"
+        working-directory: infrastructure/terraform
+
       - id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
       - run: |
