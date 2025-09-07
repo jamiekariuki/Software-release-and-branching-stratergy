@@ -8,7 +8,6 @@ on:
 env:
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }} # AWS account id
   ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }} # full ECR URI from Terraform
-  EC2_USER: ubuntu # default user for EC2
   SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }} # private key for SSH to EC2
   EC2_HOST: ${{ secrets.EC2_PUBLIC_IP }} # public IP from terraform test feat
 
@@ -129,18 +128,18 @@ jobs:
     env:
       VERSION: ${{ needs.versioning.outputs.new_version }}
       ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+      PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+      HOSTNAME: ${{ secrets.EC2_PUBLIC_IP }}
+      USER_NAME: ubuntu
 
     steps:
       - name: Setup SSH key
         run: |
-          mkdir -p ~/.ssh
-          printf "%s" "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
+          echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
 
       - name: Copy repo to EC2
         run: |
-          scp -i ~/.ssh/id_rsa -r . ${EC2_USER}@${EC2_HOST}:/home/ec2-user/app
+          scp -o StrictHostKeyChecking=no -i private_key -r . ${USER_NAME}@${HOSTNAME}:/home/ubuntu/app
 
       - name: Deploy via SSH
         run: |
