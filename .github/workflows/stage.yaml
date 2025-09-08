@@ -79,7 +79,7 @@ jobs:
       - name: Extract outputs
         id: extract
         run: |
-          ECR_URL=$(jq -r '.outputs.ecr_repo_uri.value' terraform.tfstate)
+          ECR_URL=$(jq -r '.outputs.ecr_repo_uri.value' terraform.tfstate | base64)
           EC2_IP=$(jq -r '.outputs.web_instance_public_ip.value' terraform.tfstate)
           echo "ECR_URL=$ECR_URL" >> "$GITHUB_OUTPUT"
           echo "EC2_IP=$EC2_IP" >> "$GITHUB_OUTPUT"
@@ -111,6 +111,7 @@ jobs:
 
       - name: Debug extracted outputs
         run: |
+          ECR_URL=$(echo "${{ needs.tf-outputs.outputs.ECR_URL }}" | base64 --decode)
           echo "ECR_URL=${{ needs.tf-outputs.outputs.ECR_URL  }}"
           echo "EC2_IP=${{ needs.tf-outputs.outputs.EC2_IP }}"
 
