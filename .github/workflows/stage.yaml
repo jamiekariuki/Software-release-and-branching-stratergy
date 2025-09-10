@@ -191,6 +191,8 @@ jobs:
           chmod 600 private_key
 
       - run: |
+          export ECR_URL=${ECR_URL}
+          export VERSION=${VERSION}
           ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${EC2_IP} "
             aws ecr get-login-password --region us-east-1 \
               | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com

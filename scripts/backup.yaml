@@ -246,8 +246,8 @@ jobs:
 
       - name: Deploy via SSH
         run: |
+
           ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${HOSTNAME} "
-            # Login to ECR
             aws ecr get-login-password --region us-east-1 \
               | docker login --username AWS --password-stdin ${ECR_REGISTRY}
 
