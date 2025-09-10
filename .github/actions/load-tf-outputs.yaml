@@ -1,0 +1,17 @@
+name: Load TF Outputs
+description: Downloads Terraform outputs artifact and loads them into environment variables
+runs:
+  using: "composite"
+  steps:
+    - name: Download TF outputs artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: tf-outputs
+        path: ./tf-data
+
+    - name: Load TF outputs into env
+      run: |
+        ECR_URL=$(jq -r .ecr_url ./tf-data/tf-outputs.json)
+        EC2_IP=$(jq -r .ec2_ip ./tf-data/tf-outputs.json)
+        echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
+        echo "EC2_IP=$EC2_IP" >> $GITHUB_ENV
