@@ -58,42 +58,52 @@ jobs:
           TF_IN_AUTOMATION: true
         run: terraform apply -auto-approve -input=false -var="ENV_PREFIX=$ENVIRONMENT"
 
-  # Step 3: Download TF state from S3 and extract outputs
+  # Step 3: Download TF state from S3 and save outputs as artifact
   tf-outputs:
     runs-on: ubuntu-latest
-    outputs:
-      ecr_url: ${{ steps.extract.outputs.ecr_url }}
-      ec2_ip: ${{ steps.extract.outputs.ec2_ip }}
-
     steps:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Download Terraform state
-        run: aws s3 cp "s3://850502433430-app-dev/env:/stage/networking/terraform.tfstate" terraform.tfstate
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-east-1
-
-      - name: Extract outputs
-        id: extract
         run: |
-          ECR_URL=$(jq -r '.outputs.ecr_repo_uri.value' terraform.tfstate | base64)
-          EC2_IP=$(jq -r '.outputs.web_instance_public_ip.value' terraform.tfstate)
-          echo "ecr_url=$ECR_URL" >> "$GITHUB_OUTPUT"
-          echo "ec2_ip=$EC2_IP" >> "$GITHUB_OUTPUT"
+          aws s3 cp "s3://850502433430-app-dev/env:/stage/networking/terraform.tfstate" terraform.tfstate
 
-      - name: Debug extracted outputs
+      - name: Extract outputs -> file
         run: |
-          echo "ECR_URL=${{ steps.extract.outputs.ecr_url }}"
-          echo "EC2_IP=${{ steps.extract.outputs.ec2_ip }}"
+          jq -r '{ecr_url: .outputs.ecr_repo_uri.value, ec2_ip: .outputs.web_instance_public_ip.value}' terraform.tfstate > tf-outputs.json
+          echo "Extracted terraform outputs:"
+          cat tf-outputs.json
 
+      - name: Upload TF outputs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tf-outputs
+          path: tf-outputs.json
+
+  # Step 4: Example usage (test job)
   test:
     runs-on: ubuntu-latest
     needs: tf-outputs
     steps:
-      - name: Debug extracted outputs
+      - name: Download TF outputs artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tf-outputs
+          path: ./tf-data
+
+      - name: Load TF outputs into env
         run: |
-          echo "ECR_URL=${{ needs.tf-outputs.outputs.ecr_url }}"
-          echo "EC2_IP=${{ needs.tf-outputs.outputs.ec2_ip }}"
+          ECR_URL=$(jq -r .ecr_url ./tf-data/tf-outputs.json)
+          EC2_IP=$(jq -r .ec2_ip ./tf-data/tf-outputs.json)
+          echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
+          echo "EC2_IP=$EC2_IP" >> $GITHUB_ENV
+
+      - name: Debug loaded values
+        run: |
+          echo "ECR_URL=$ECR_URL"
+          echo "EC2_IP=$EC2_IP"
