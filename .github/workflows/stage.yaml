@@ -169,49 +169,49 @@ jobs:
           git tag $VERSION
           git push origin $VERSION
 
-# Deploy to EC2
-deploy:
-  runs-on: ubuntu-latest
-  needs: [push, versioning]
-  env:
-    VERSION: ${{ needs.versioning.outputs.new_version }}
-    PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-    USER_NAME: ubuntu
+  # Deploy to EC2
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [push, versioning]
+    env:
+      VERSION: ${{ needs.versioning.outputs.new_version }}
+      PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+      USER_NAME: ubuntu
 
-  steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Load TF Outputs
-      uses: ./.github/actions/load-tf-outputs
+      - name: Load TF Outputs
+        uses: ./.github/actions/load-tf-outputs
 
-    - name: Setup SSH Key
-      run: |
-        echo "$PRIVATE_KEY" > private_key
-        chmod 600 private_key
+      - name: Setup SSH Key
+        run: |
+          echo "$PRIVATE_KEY" > private_key
+          chmod 600 private_key
 
-    - name: Deploy Docker container
-      run: |
-        echo "ECR_URL=$ECR_URL"
-        echo "VERSION=$VERSION"
-        ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${EC2_IP} "
-          # Pass variables inside remote shell
-          ECR_URL='${ECR_URL}'
-          VERSION='${VERSION}'
-          AWS_ACCOUNT_ID='${AWS_ACCOUNT_ID}'
+      - name: Deploy Docker container
+        run: |
+          echo "ECR_URL=$ECR_URL"
+          echo "VERSION=$VERSION"
+          ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${EC2_IP} "
+            # Pass variables inside remote shell
+            ECR_URL='${ECR_URL}'
+            VERSION='${VERSION}'
+            AWS_ACCOUNT_ID='${AWS_ACCOUNT_ID}'
 
-          echo \"Deploying Docker image \$ECR_URL:\$VERSION on EC2 \$EC2_IP\"
+            echo \"Deploying Docker image \$ECR_URL:\$VERSION on EC2 \$EC2_IP\"
 
-          # Login to ECR
-          aws ecr get-login-password --region us-east-1 \
-            | docker login --username AWS --password-stdin \$AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
+            # Login to ECR
+            aws ecr get-login-password --region us-east-1 \
+              | docker login --username AWS --password-stdin \$AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
 
-          # Pull, stop old container, remove old container, run new container
-          docker pull \$ECR_URL:\$VERSION
-          if docker ps -q --filter 'name=app' | grep -q .; then
-            docker stop app
-            docker rm app
-          fi
-          docker run -d --name app -p 8080:80 \$ECR_URL:\$VERSION
-        "
+            # Pull, stop old container, remove old container, run new container
+            docker pull \$ECR_URL:\$VERSION
+            if docker ps -q --filter 'name=app' | grep -q .; then
+              docker stop app
+              docker rm app
+            fi
+            docker run -d --name app -p 8080:80 \$ECR_URL:\$VERSION
+          "
