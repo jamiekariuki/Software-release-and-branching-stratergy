@@ -10,6 +10,7 @@ runs:
         path: ./tf-data
 
     - name: Load TF outputs into env
+      shell: bash
       run: |
         ECR_URL=$(jq -r .ecr_url ./tf-data/tf-outputs.json)
         EC2_IP=$(jq -r .ec2_ip ./tf-data/tf-outputs.json)
