@@ -2,6 +2,7 @@
 set -e
 
 # 1. Get last tag, detect if none exist
+git fetch --tags
 LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
 
 if [ -z "$LAST_TAG" ]; then
