@@ -39,7 +39,7 @@ permissions:
 
 jobs:
   # Step 1: Detect if app changed to avoid building
-  filter-changes:
+  filter:
     runs-on: ubuntu-latest
     outputs:
       app_changed: ${{ steps.filter.outputs.app }}

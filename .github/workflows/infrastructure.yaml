@@ -35,7 +35,6 @@ permissions:
 jobs:
   # Step 1: Terraform Apply
   terraform:
-    needs: filter-changes
     runs-on: ubuntu-latest
 
     steps:
