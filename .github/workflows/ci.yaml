@@ -52,7 +52,7 @@ jobs:
           filters: |
             app:
               - 'app/**'
-          base-ref: ${{ github.event.before }}
+          base: ${{ github.event.before }}
 
   # Step 2: Download TF state from S3 and save outputs as artifact
   tf-outputs:
