@@ -1,4 +1,4 @@
-# -------- STAGE 1: Build --------test
+# -------- STAGE 1: Build --------
 FROM node:22-alpine AS builder
 
 WORKDIR /app

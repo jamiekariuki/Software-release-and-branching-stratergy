@@ -17,4 +17,4 @@ variable "ENV_PREFIX" {
   }
 }
 
-//stage
+//dev
