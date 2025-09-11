@@ -1,11 +1,9 @@
 name: Terraform
 
 on:
-  pull_request:
+  push:
     branches:
-      - release/dev
-      - release/stage
-      - release/prod
+      - release/**
     paths:
       - "infrastructure/terraform/**"
 
