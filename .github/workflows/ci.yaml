@@ -59,7 +59,7 @@ jobs:
       needs.filter.outputs.app_changed == 'true' &&
       (
         (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-        (github.event_name == 'pull_request' || github.event_name == 'workflow_run')
+        (github.event_name == 'push' || github.event_name == 'workflow_run')
       )
 
     steps:
@@ -94,7 +94,7 @@ jobs:
       needs.filter.outputs.app_changed == 'true' &&
       (
         (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-        (github.event_name == 'pull_request' || github.event_name == 'workflow_run')
+        (github.event_name == 'push' || github.event_name == 'workflow_run')
       )
 
     defaults:
@@ -123,7 +123,7 @@ jobs:
       needs.filter.outputs.app_changed == 'true' &&
       (
         (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-        (github.event_name == 'pull_request' || github.event_name == 'workflow_run')
+        (github.event_name == 'push' || github.event_name == 'workflow_run')
       )
 
     outputs:
