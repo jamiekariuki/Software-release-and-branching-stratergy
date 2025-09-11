@@ -4,8 +4,8 @@ on:
   push:
     branches:
       - release/**
-  #    paths:
-  #      - "app/**"
+    paths:
+      - "app/**"
 
   workflow_run:
     workflows: ["Terraform"]
