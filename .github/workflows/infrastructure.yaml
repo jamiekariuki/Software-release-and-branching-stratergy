@@ -6,8 +6,8 @@ on:
       - release/dev
       - release/stage
       - release/prod
-    paths:
-      - "infrastructure/terraform/**"
+  #    paths:
+  #      - "infrastructure/terraform/**"
 
   workflow_dispatch:
     inputs:
