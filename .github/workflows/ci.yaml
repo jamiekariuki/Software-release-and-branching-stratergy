@@ -6,8 +6,8 @@ on:
       - release/dev
       - release/stage
       - release/prod
-  #    paths:
-  #      - "app/**"
+    paths:
+      - "app/**"
 
   workflow_run:
     workflows: ["Terraform"]
