@@ -1,0 +1,35 @@
+name: "Load Terraform Outputs"
+description: "Fetches Terraform state from S3, extracts outputs, and uploads as artifact"
+inputs:
+  environment:
+    description: "Environment name (dev, stage, prod)"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Install jq
+      run: sudo apt-get update && sudo apt-get install -y jq
+      shell: bash
+
+    - name: Download Terraform state
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-east-1
+      run: |
+        echo "Downloading state for environment: ${{ inputs.environment }}"
+        aws s3 cp "s3://${AWS_ACCOUNT_ID}-app-dev/${{ inputs.environment }}/networking/terraform.tfstate" terraform.tfstate
+      shell: bash
+
+    - name: Extract outputs -> file
+      run: |
+        jq -r '{ecr_url: .outputs.ecr_repo_uri.value, ec2_ip: .outputs.web_instance_public_ip.value}' terraform.tfstate > tf-outputs.json
+        echo "Extracted terraform outputs:"
+        cat tf-outputs.json
+      shell: bash
+
+    - name: Upload TF outputs artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: tf-outputs
+        path: tf-outputs.json
