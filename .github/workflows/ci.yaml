@@ -225,7 +225,7 @@ jobs:
   #smoke test
   smoke_test:
     runs-on: ubuntu-latest
-    needs: deploy
+    needs: [deploy, tag_release]
     outputs:
       smoke_result: ${{ steps.smoke.outputs.result }}
     steps:

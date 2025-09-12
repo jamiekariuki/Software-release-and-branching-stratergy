@@ -20,5 +20,5 @@ COPY env.sh /docker-entrypoint.d/env.sh
 
 RUN chmod +x /docker-entrypoint.d/env.sh
 
-EXPOSE 80
+EXPOSE 8000
 CMD ["nginx", "-g", "daemon off;"]
