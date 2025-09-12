@@ -1,0 +1,57 @@
+name: "Deploy to EC2"
+description: "Deploy Docker container to EC2 using Terraform outputs"
+
+inputs:
+  private-key:
+    description: "Private SSH key for EC2 access"
+    required: true
+  username:
+    description: "SSH username for EC2"
+    required: true
+    default: ubuntu
+  version:
+    description: "App version (from versioning step)"
+    required: true
+  ecr-url:
+    description: "ECR repository URL"
+    required: true
+  aws-account-id:
+    description: "AWS Account ID"
+    required: true
+  ec2-ip:
+    description: "Target EC2 instance public IP"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup SSH Key
+      shell: bash
+      run: |
+        echo "${{ inputs.private-key }}" > private_key
+        chmod 600 private_key
+
+    - name: Deploy Docker container
+      shell: bash
+      run: |
+        echo "Deploying version ${{ inputs.version }} to EC2 ${{ inputs.ec2-ip }}"
+
+        ssh -o StrictHostKeyChecking=no -i private_key ${{ inputs.username }}@${{ inputs.ec2-ip }} "
+          ECR_URL='${{ inputs.ecr-url }}'
+          VERSION='${{ inputs.version }}'
+          AWS_ACCOUNT_ID='${{ inputs.aws-account-id }}'
+
+          echo \"Deploying Docker image \$ECR_URL:\$VERSION on EC2 ${{ inputs.ec2-ip }}\"
+
+          # Login to ECR
+          aws ecr get-login-password --region us-east-1 \
+            | docker login --username AWS --password-stdin \$AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
+
+          # Pull and redeploy container
+          docker pull \$ECR_URL:\$VERSION
+          if docker ps -q --filter 'name=app' | grep -q .; then
+            docker stop app
+            docker rm app
+          fi
+          docker run -d --name app -p 8080:80 \$ECR_URL:\$VERSION
+        "

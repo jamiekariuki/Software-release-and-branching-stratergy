@@ -200,7 +200,6 @@ jobs:
     needs: [push, versioning]
     env:
       VERSION: ${{ needs.versioning.outputs.new_version }}
-      PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
       USER_NAME: ubuntu
 
     steps:
@@ -211,32 +210,101 @@ jobs:
       - name: Load TF Outputs
         uses: ./.github/actions/load-tf-outputs
 
-      - name: Setup SSH Key
+      - name: Deploy to EC2
+        uses: ./.github/actions/deploy-to-ec2
+        with:
+          private-key: ${{ secrets.EC2_SSH_KEY }}
+          username: ubuntu
+          version: ${{ env.VERSION }}
+          ecr-url: ${{ env.ECR_URL }}
+          aws-account-id: ${{ env.AWS_ACCOUNT_ID }}
+          ec2-ip: ${{ env.EC2_IP }}
+
+#---------------------TESTING FOR ROLLBACK-----------------------------
+
+  #smoke test
+  smoke_test:
+    runs-on: ubuntu-latest
+    needs: deploy
+    outputs:
+      smoke_result: ${{ steps.smoke.outputs.result }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Load TF Outputs
+        uses: ./.github/actions/load-tf-outputs
+
+      - name: Make smoke script executable
+        run: chmod +x ./.github/actions/scripts/smoke-test.sh
+
+      - name: Run smoke script
+        id: smoke
+        run: .github/actions/scripts/smoke-test.sh "$EC2_IP" "8080"
+
+  #rollback verions
+  rollback_versioning:
+    runs-on: ubuntu-latest
+    needs: smoke_test
+    if: needs.smoke_test.outputs.smoke_result == 'false' 
+    
+    outputs:
+      rollback_version: ${{ steps.rollback.outputs.version }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Make rollback script executable
+        run: chmod +x ./.github/actions/scripts/rollback-version.sh
+
+      - name: Run rollback script
+        id: rollback
         run: |
-          echo "$PRIVATE_KEY" > private_key
-          chmod 600 private_key
+          ./.github/actions/scripts/rollback-version.sh 
 
-      - name: Deploy Docker container
-        run: |
-          echo "ECR_URL=$ECR_URL"
-          echo "VERSION=$VERSION"
-          ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${EC2_IP} "
-            # Pass variables inside remote shell
-            ECR_URL='${ECR_URL}'
-            VERSION='${VERSION}'
-            AWS_ACCOUNT_ID='${AWS_ACCOUNT_ID}'
+  # rollback Deploy to EC2
+  rollback_deploy:
+    runs-on: ubuntu-latest
+    needs: rollback_versioning
+    env:
+      VERSION: ${{ needs.rollback_versioning.outputs.rollback_version}}
+      USER_NAME: ubuntu
 
-            echo \"Deploying Docker image \$ECR_URL:\$VERSION on EC2 \$EC2_IP\"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-            # Login to ECR
-            aws ecr get-login-password --region us-east-1 \
-              | docker login --username AWS --password-stdin \$AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
+      - name: Load TF Outputs
+        uses: ./.github/actions/load-tf-outputs
 
-            # Pull, stop old container, remove old container, run new container
-            docker pull \$ECR_URL:\$VERSION
-            if docker ps -q --filter 'name=app' | grep -q .; then
-              docker stop app
-              docker rm app
-            fi
-            docker run -d --name app -p 8080:80 \$ECR_URL:\$VERSION
-          "
+      - name: Deploy to EC2
+        uses: ./.github/actions/deploy-to-ec2
+        with:
+          private-key: ${{ secrets.EC2_SSH_KEY }}
+          username: ubuntu
+          version: ${{ env.VERSION }}
+          ecr-url: ${{ env.ECR_URL }}
+          aws-account-id: ${{ env.AWS_ACCOUNT_ID }}
+          ec2-ip: ${{ env.EC2_IP }}
+
+  # Create rollback Git tag
+  tag_release:
+    runs-on: ubuntu-latest
+    needs: [rollback_deploy, rollback_versioning]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - run: |
+          VERSION=${{ needs.rollback_versioning.outputs.rollback_version}}
+          ROLLBACK_TAG="rollback-$VERSION"
+          echo "Creating rollback tag: $ROLLBACK_TAG"
+          git tag $ROLLBACK_TAG
+          git push origin $ROLLBACK_TAG
