@@ -17,6 +17,9 @@ on:
           - stage
           - prod
 
+permissions:
+  contents: write
+
 jobs:
   #rollback verions
   rollback_versioning:
