@@ -1,0 +1,29 @@
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to rollback to (e.g., prod-v1.0.2). Leave empty to rollback to previous."
+        required: false
+        default: ""
+
+jobs:
+  #rollback verions
+  rollback-versioning:
+    runs-on: ubuntu-latest
+    outputs:
+      rollback_version: ${{ steps.rollback.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Make rollback script executable
+        run: chmod +x ./.github/actions/scripts/rollback-version.sh
+
+      - name: Run rollback script
+        id: rollback
+        run: |
+          ./.github/actions/scripts/rollback-version.sh "${{ github.event.inputs.version }}"
