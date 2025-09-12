@@ -7,10 +7,19 @@ on:
         description: "Version to rollback to (e.g., prod-v1.0.2). Leave empty to rollback to previous."
         required: false
         default: ""
+      environment:
+        description: "Select environment to deploy"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - stage
+          - prod
 
 jobs:
   #rollback verions
-  rollback-versioning:
+  rollback_versioning:
     runs-on: ubuntu-latest
     outputs:
       rollback_version: ${{ steps.rollback.outputs.version }}
@@ -27,3 +36,63 @@ jobs:
         id: rollback
         run: |
           ./.github/actions/scripts/rollback-version.sh "${{ github.event.inputs.version }}"
+
+  #get terraform outputs
+  tf-outputs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load TF Outputs from s3
+        uses: ./.github/actions/load-tf-outputs-s3
+        with:
+          environment: ${{ github.event.inputs.environment }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+          aws-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+
+  # rollback Deploy to EC2
+  rollback_deploy:
+    runs-on: ubuntu-latest
+    needs: [rollback_versioning, tf-outputs]
+    env:
+      VERSION: ${{ needs.rollback_versioning.outputs.rollback_version}}
+      USER_NAME: ubuntu
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Load TF Outputs
+        uses: ./.github/actions/load-tf-outputs
+
+      - name: Deploy to EC2
+        uses: ./.github/actions/deploy-to-ec2
+        with:
+          private-key: ${{ secrets.EC2_SSH_KEY }}
+          username: ubuntu
+          version: ${{ env.VERSION }}
+          ecr-url: ${{ env.ECR_URL }}
+          aws-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          ec2-ip: ${{ env.EC2_IP }}
+
+  # Create rollback Git tag
+  tag_release_rollback:
+    runs-on: ubuntu-latest
+    needs: [rollback_deploy, rollback_versioning]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - run: |
+          VERSION=${{ needs.rollback_versioning.outputs.rollback_version}}
+          ROLLBACK_TAG="rollback-$VERSION"
+          echo "Creating rollback tag: $ROLLBACK_TAG"
+          git tag $ROLLBACK_TAG
+          git push origin $ROLLBACK_TAG
