@@ -32,7 +32,7 @@ runs:
         AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
       run: |
         echo "Downloading state for environment: ${{ inputs.environment }}"
-        aws s3 cp "s3://${{ inputs.aws-account-id }}-app-dev/${{ inputs.environment }}/networking/terraform.tfstate" terraform.tfstate
+        aws s3 cp "s3://${{ inputs.aws-account-id }}-app-dev/env:/${{ inputs.environment }}/networking/terraform.tfstate" terraform.tfstate
       shell: bash
 
     - name: Extract outputs -> file
