@@ -66,6 +66,7 @@ jobs:
       )
 
     steps:
+      - uses: actions/checkout@v4
       - name: Load TF Outputs from s3
         uses: ./.github/actions/load-tf-outputs-s3
         with:
