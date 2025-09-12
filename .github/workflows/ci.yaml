@@ -220,7 +220,7 @@ jobs:
           aws-account-id: ${{ env.AWS_ACCOUNT_ID }}
           ec2-ip: ${{ env.EC2_IP }}
 
-#---------------------TESTING FOR ROLLBACK-----------------------------
+  #---------------------TESTING FOR ROLLBACK-----------------------------
 
   #smoke test
   smoke_test:
@@ -245,11 +245,11 @@ jobs:
   rollback_versioning:
     runs-on: ubuntu-latest
     needs: smoke_test
-    if: needs.smoke_test.outputs.smoke_result == 'false' 
-    
+    if: needs.smoke_test.outputs.smoke_result == 'false'
+
     outputs:
       rollback_version: ${{ steps.rollback.outputs.version }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -262,7 +262,7 @@ jobs:
       - name: Run rollback script
         id: rollback
         run: |
-          ./.github/actions/scripts/rollback-version.sh 
+          ./.github/actions/scripts/rollback-version.sh
 
   # rollback Deploy to EC2
   rollback_deploy:
@@ -291,7 +291,7 @@ jobs:
           ec2-ip: ${{ env.EC2_IP }}
 
   # Create rollback Git tag
-  tag_release:
+  tag_release_rollback:
     runs-on: ubuntu-latest
     needs: [rollback_deploy, rollback_versioning]
     steps:
