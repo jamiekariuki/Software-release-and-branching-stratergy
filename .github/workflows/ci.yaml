@@ -71,6 +71,10 @@ jobs:
         uses: ./.github/actions/load-tf-outputs-s3
         with:
           environment: ${{ env.ENVIRONMENT }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+          aws-account-id: ${{ env.AWS_ACCOUNT_ID }}
 
   # CI Build
   build:
