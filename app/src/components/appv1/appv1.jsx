@@ -8,7 +8,6 @@ const Appv1 = () => {
         <div className="circles c1" />
         <div className="circles c2" />
         <div className="circles c3" />
-        <div className="circles c3" />
       </div>
     </div>
   );
