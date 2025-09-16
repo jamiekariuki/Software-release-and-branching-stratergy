@@ -22,7 +22,7 @@ The goal is to show how disciplined workflows + automation can transform the way
 
 ### 🔹 Infrastructure
 
-![Infrastructure](infrastructre.png)
+![Infrastructure](infrastructure.png)
 
 Infrastructure is fully provisioned with **Terraform**, using:
 
